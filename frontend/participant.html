@@ -4,46 +4,51 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TechFest Typing - Participant</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body class="dark-theme">
   <div class="container">
-    <div class="header">
+    <header class="header">
       <h1>⚡ TechFest Typing Battle</h1>
       <span class="role-badge">PARTICIPANT</span>
-    </div>
+    </header>
 
     <!-- JOIN SCREEN -->
-    <div id="joinScreen" class="center-screen">
+    <section id="joinScreen" class="center-screen">
       <div class="join-card">
         <h2>Join Competition</h2>
-        <div class="form-group">
-          <label>Competition Code</label>
-          <input type="text" id="competitionCode" placeholder="Enter 5-letter code" maxlength="5" />
-        </div>
-        <div class="form-group">
-          <label>Your Name</label>
-          <input type="text" id="participantName" placeholder="Enter your name" />
-        </div>
-        <button class="btn-primary" id="joinBtn">Join Competition</button>
+        <form id="joinForm" onsubmit="return false;">
+          <div class="form-group">
+            <label for="competitionCode">Competition Code</label>
+            <input type="text" id="competitionCode" placeholder="Enter 5-letter code" maxlength="5" required autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="participantName">Your Name</label>
+            <input type="text" id="participantName" placeholder="Enter your name" required autocomplete="off" />
+          </div>
+          <button type="button" class="btn-primary" id="joinBtn">Join Competition</button>
+        </form>
         <div id="joinError" class="error-message"></div>
       </div>
-    </div>
+    </section>
 
     <!-- LOBBY SCREEN -->
-    <div id="lobbyScreen" class="center-screen hidden">
+    <section id="lobbyScreen" class="center-screen hidden">
       <div class="lobby-card">
-        <h2>Welcome, <span id="welcomeName"></span>!</h2>
-        <p class="competition-name" id="competitionName"></p>
+        <h2>Welcome, <span id="welcomeName">Participant</span>!</h2>
+        <p class="competition-name" id="competitionName">Loading...</p>
         <div class="participants-count">
           <p>Participants Ready: <strong id="participantCountDisplay">0</strong></p>
         </div>
+        <div class="waiting-animation">
+          <div class="spinner"></div>
+        </div>
         <p class="waiting-text">⏳ Waiting for organizer to start Round 1...</p>
       </div>
-    </div>
+    </section>
 
     <!-- TYPING TEST SCREEN -->
-    <div id="testScreen" class="test-screen-improved hidden">
+    <section id="testScreen" class="test-screen-improved hidden">
       <!-- STATS BAR -->
       <div class="stats-bar-improved">
         <div class="stat-box">
@@ -52,7 +57,7 @@
         </div>
         <div class="stat-box">
           <span class="stat-label">Accuracy</span>
-          <span class="stat-value" id="accuracyDisplay">0%</span>
+          <span class="stat-value" id="accuracyDisplay">100%</span>
         </div>
         <div class="stat-box">
           <span class="stat-label">Time</span>
@@ -62,36 +67,51 @@
 
       <!-- TYPING AREA - CENTERED AND IMPROVED -->
       <div class="typing-container-improved">
-        <div class="text-display-improved" id="textDisplay"></div>
-        <input type="text" id="typingInput" class="typing-input-improved" placeholder="Click here to start typing..." autocomplete="off" spellcheck="false" />
+        <div class="text-display-improved" id="textDisplay">
+          <p class="loading-text">Loading text...</p>
+        </div>
+        <input 
+          type="text" 
+          id="typingInput" 
+          class="typing-input-improved" 
+          placeholder="Click here to start typing..." 
+          autocomplete="off" 
+          spellcheck="false" 
+        />
         <p class="focus-warning hidden" id="focusWarning">⚠️ Tab switch detected! Return to continue.</p>
       </div>
-    </div>
+    </section>
 
     <!-- RESULTS SCREEN -->
-    <div id="resultsScreen" class="center-screen hidden">
+    <section id="resultsScreen" class="center-screen hidden">
       <div class="results-card">
         <h2>Round Complete! 🎉</h2>
-        <div class="result-item">
-          <span>Your WPM:</span>
-          <strong id="resultWpm">0</strong>
+        <div class="personal-results">
+          <div class="result-item">
+            <span>Your WPM:</span>
+            <strong id="resultWpm">0</strong>
+          </div>
+          <div class="result-item">
+            <span>Your Accuracy:</span>
+            <strong id="resultAccuracy">0%</strong>
+          </div>
         </div>
-        <div class="result-item">
-          <span>Your Accuracy:</span>
-          <strong id="resultAccuracy">0%</strong>
+        <div class="results-leaderboard">
+          <h3>Round Leaderboard</h3>
+          <div id="roundLeaderboard"></div>
         </div>
-        <div id="roundLeaderboard"></div>
         <p id="nextRoundText" class="next-round-text">⏳ Waiting for next round...</p>
       </div>
-    </div>
+    </section>
 
     <!-- FINAL RESULTS SCREEN -->
-    <div id="finalScreen" class="center-screen hidden">
+    <section id="finalScreen" class="center-screen hidden">
       <div class="final-card">
         <h2>🏆 Final Rankings 🏆</h2>
         <div id="finalRankings"></div>
+        <button type="button" class="btn-primary" onclick="location.reload()">Start New Competition</button>
       </div>
-    </div>
+    </section>
   </div>
 
   <script src="https://cdn.socket.io/4.5.4/socket.io.js"></script>
