@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TechFest Typing - Participant</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body class="dark-theme">
   <div class="container">
     <header class="header">
@@ -20,13 +22,16 @@
         <form id="joinForm" onsubmit="return false;">
           <div class="form-group">
             <label for="competitionCode">Competition Code</label>
-            <input type="text" id="competitionCode" placeholder="Enter 5-letter code" maxlength="5" required autocomplete="off" />
+            <input type="text" id="competitionCode" placeholder="Enter 5-letter code" maxlength="5" required
+              autocomplete="off" />
           </div>
           <div class="form-group">
             <label for="participantName">Your Name</label>
             <input type="text" id="participantName" placeholder="Enter your name" required autocomplete="off" />
           </div>
-          <button type="button" class="btn-primary" id="joinBtn">Join Competition</button>
+          <button type="button" class="btn-primary" id="joinBtn">
+            Join Competition
+          </button>
         </form>
         <div id="joinError" class="error-message"></div>
       </div>
@@ -38,12 +43,17 @@
         <h2>Welcome, <span id="welcomeName">Participant</span>!</h2>
         <p class="competition-name" id="competitionName">Loading...</p>
         <div class="participants-count">
-          <p>Participants Ready: <strong id="participantCountDisplay">0</strong></p>
+          <p>
+            Participants Ready:
+            <strong id="participantCountDisplay">0</strong>
+          </p>
         </div>
         <div class="waiting-animation">
           <div class="spinner"></div>
         </div>
-        <p class="waiting-text">⏳ Waiting for organizer to start Round 1...</p>
+        <p class="waiting-text">
+          ⏳ Waiting for organizer to start Round 1...
+        </p>
       </div>
     </section>
 
@@ -55,7 +65,7 @@
           <span class="stat-label">WPM</span>
           <span class="stat-value" id="wpmDisplay">0</span>
         </div>
-        
+
         <div class="stat-box">
           <span class="stat-label">Accuracy</span>
           <span class="stat-value" id="accuracyDisplay">100%</span>
@@ -71,15 +81,11 @@
         <div class="text-display-improved" id="textDisplay">
           <p class="loading-text">Loading text...</p>
         </div>
-        <input 
-          type="text" 
-          id="typingInput" 
-          class="typing-input-improved" 
-          placeholder="Click here to start typing..." 
-          autocomplete="off" 
-          spellcheck="false" 
-        />
-        <p class="focus-warning hidden" id="focusWarning">⚠️ Tab switch detected! Return to continue.</p>
+        <input type="text" id="typingInput" class="typing-input-improved" placeholder="Click here to start typing..."
+          autocomplete="off" spellcheck="false" />
+        <p class="focus-warning hidden" id="focusWarning">
+          ⚠️ Tab switch detected! Return to continue.
+        </p>
       </div>
     </section>
 
@@ -101,7 +107,9 @@
           <h3>Round Leaderboard</h3>
           <div id="roundLeaderboard"></div>
         </div> -->
-        <p id="nextRoundText" class="next-round-text">⏳ Waiting for next round...</p>
+        <p id="nextRoundText" class="next-round-text">
+          ⏳ Waiting for next round...
+        </p>
       </div>
     </section>
 
@@ -110,7 +118,9 @@
       <div class="final-card">
         <h2>🏆 Final Rankings 🏆</h2>
         <div id="finalRankings"></div>
-        <button type="button" class="btn-primary" onclick="location.reload()">Start New Competition</button>
+        <button type="button" class="btn-primary" onclick="location.reload()">
+          Start New Competition
+        </button>
       </div>
     </section>
   </div>
@@ -118,4 +128,5 @@
   <script src="https://cdn.socket.io/4.5.4/socket.io.js"></script>
   <script src="participant-script.js"></script>
 </body>
+
 </html>
