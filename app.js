@@ -32,7 +32,6 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/typing-pl
 const Competition = require('./models/Competition');
 
 // ============= API ROUTES =============
-
 app.post('/api/create', async (req, res) => {
   try {
     const { name, description, rounds } = req.body;
@@ -101,7 +100,6 @@ app.get('/api/competition/:code', async (req, res) => {
 });
 
 // ============= SOCKET.IO =============
-
 const activeCompetitions = new Map();
 
 io.on('connection', (socket) => {
@@ -150,7 +148,7 @@ io.on('connection', (socket) => {
 
       compData.participants.set(socket.id, participant);
 
-      // Add to MongoDB
+      // Add to MongoDB participants array
       await Competition.findByIdAndUpdate(
         competition._id,
         {
@@ -232,6 +230,8 @@ io.on('connection', (socket) => {
           totalChars: 0,
           wpm: 0,
           accuracy: 0,
+          errors: 0,
+          backspaces: 0,
           testStartTime: Date.now()
         };
       });
@@ -260,7 +260,9 @@ io.on('connection', (socket) => {
 
       // Auto-end after duration
       setTimeout(async () => {
-        await endRound(competitionId, roundIndex, competition, compData);
+        // Re-fetch competition doc to have latest rounds content & metadata
+        const competitionDoc = await Competition.findById(competitionId);
+        await endRound(competitionId, roundIndex, competitionDoc, compData);
       }, round.duration * 1000);
 
     } catch (error) {
@@ -271,7 +273,7 @@ io.on('connection', (socket) => {
 
   // TYPING PROGRESS
   socket.on('progress', async (data) => {
-    const { competitionId, correctChars, totalChars } = data;
+    const { competitionId, correctChars, totalChars, errors = 0, backspaces = 0 } = data;
 
     try {
       const compData = activeCompetitions.get(competitionId);
@@ -283,7 +285,7 @@ io.on('connection', (socket) => {
       const startTime = participant.currentRoundData.testStartTime;
       const elapsedSeconds = (Date.now() - startTime) / 1000;
 
-      // Validate WPM server-side
+      // Validate and compute
       const wpm = elapsedSeconds > 0 
         ? Math.round((correctChars / 5) / (elapsedSeconds / 60)) 
         : 0;
@@ -298,6 +300,8 @@ io.on('connection', (socket) => {
         incorrectChars,
         wpm,
         accuracy,
+        errors,
+        backspaces,
         testStartTime: startTime,
         elapsedSeconds
       };
@@ -343,18 +347,33 @@ function generateCode() {
   return code;
 }
 
+function typingTextLengthFor(compData) {
+  try {
+    const compDoc = compData.competitionDoc;
+    const idx = compData.currentRound;
+    if (!compDoc || idx == null || idx < 0) return 0;
+    const text = compDoc.rounds[idx].text || '';
+    return text.length;
+  } catch (e) {
+    return 0;
+  }
+}
+
 function updateAndBroadcastLeaderboard(competitionId, compData) {
+  const totalTextLength = typingTextLengthFor(compData) || 0;
   const leaderboard = Array.from(compData.participants.values())
     .map(p => ({
       name: p.name,
       wpm: p.currentRoundData?.wpm || 0,
-      accuracy: p.currentRoundData?.accuracy || 0
+      accuracy: p.currentRoundData?.accuracy || 0,
+      errors: p.currentRoundData?.errors || 0,
+      backspaces: p.currentRoundData?.backspaces || 0,
+      progress: totalTextLength > 0 ? Math.round(((p.currentRoundData?.totalChars || 0) / totalTextLength) * 100) : 0
     }))
     .sort((a, b) => b.wpm - a.wpm);
 
-  // Send to all (organizer + participants)
   io.to(`competition_${competitionId}`).emit('leaderboardUpdate', {
-    round: compData.currentRound + 1,
+    roundIndex: compData.currentRound,
     leaderboard
   });
 }
@@ -366,9 +385,8 @@ async function endRound(competitionId, roundIndex, competition, compData) {
     compData.roundInProgress = false;
     const endTime = new Date();
 
-    // Calculate round statistics
     const participantsArray = Array.from(compData.participants.values());
-    const roundResults = participantsArray.map((p, index) => ({
+    const roundResults = participantsArray.map((p) => ({
       participantName: p.name,
       participantId: p.socketId,
       wpm: p.currentRoundData.wpm || 0,
@@ -376,6 +394,8 @@ async function endRound(competitionId, roundIndex, competition, compData) {
       correctChars: p.currentRoundData.correctChars || 0,
       totalChars: p.currentRoundData.totalChars || 0,
       incorrectChars: p.currentRoundData.incorrectChars || 0,
+      errors: p.currentRoundData.errors || 0,
+      backspaces: p.currentRoundData.backspaces || 0,
       typingTime: Math.round(p.currentRoundData.elapsedSeconds) || 0,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -423,7 +443,7 @@ async function endRound(competitionId, roundIndex, competition, compData) {
 
     console.log(`✓ Round ${roundIndex + 1} ended - Stats: Avg ${averageWpm} WPM, ${averageAccuracy}% accuracy`);
 
-    // Store scores in participant object
+    // Store scores in participant object (in memory)
     compData.participants.forEach((p) => {
       if (!p.scores) p.scores = [];
       const roundScore = rankedResults.find(r => r.participantName === p.name);
@@ -432,25 +452,31 @@ async function endRound(competitionId, roundIndex, competition, compData) {
           round: roundIndex,
           wpm: roundScore.wpm,
           accuracy: roundScore.accuracy,
-          rank: roundScore.rank
+          rank: roundScore.rank,
+          errors: roundScore.errors || 0,
+          backspaces: roundScore.backspaces || 0
         });
         if (!p.roundScores) p.roundScores = [];
         p.roundScores.push({
           roundNumber: roundIndex + 1,
           wpm: roundScore.wpm,
           accuracy: roundScore.accuracy,
-          rank: roundScore.rank
+          rank: roundScore.rank,
+          errors: roundScore.errors || 0,
+          backspaces: roundScore.backspaces || 0
         });
       }
     });
 
-    // Send round end to all participants
+    // Send round end to all participants (include errors/backspaces)
     const finalLeaderboard = rankedResults
       .sort((a, b) => a.rank - b.rank)
       .map(r => ({
         name: r.participantName,
         wpm: r.wpm,
         accuracy: r.accuracy,
+        errors: r.errors || 0,
+        backspaces: r.backspaces || 0,
         rank: r.rank
       }));
 
@@ -459,7 +485,7 @@ async function endRound(competitionId, roundIndex, competition, compData) {
       leaderboard: finalLeaderboard
     });
 
-    // If all rounds complete
+    // If last round, show final results
     if (roundIndex === competition.rounds.length - 1) {
       await showFinalResults(competitionId, compData, competition);
     }
@@ -473,15 +499,15 @@ async function showFinalResults(competitionId, compData, competition) {
   try {
     const participantsArray = Array.from(compData.participants.values());
 
-    // Calculate final rankings
+    // Build final rankings: avg WPM, avg accuracy, sum errors/backspaces across rounds
     const finalRankings = participantsArray
       .map(p => {
         const scores = p.scores || [];
-        
+
         const avgWpm = scores.length > 0 
           ? Math.round(scores.reduce((sum, s) => sum + s.wpm, 0) / scores.length)
           : 0;
-        
+
         const avgAccuracy = scores.length > 0 
           ? Math.round(scores.reduce((sum, s) => sum + s.accuracy, 0) / scores.length)
           : 0;
@@ -494,6 +520,14 @@ async function showFinalResults(competitionId, compData, competition) {
           ? Math.min(...scores.map(s => s.wpm))
           : 0;
 
+        const totalErrors = scores.length > 0
+          ? scores.reduce((sum, s) => sum + (s.errors || 0), 0)
+          : 0;
+
+        const totalBackspaces = scores.length > 0
+          ? scores.reduce((sum, s) => sum + (s.backspaces || 0), 0)
+          : 0;
+
         return {
           participantName: p.name,
           averageWpm: avgWpm,
@@ -501,6 +535,8 @@ async function showFinalResults(competitionId, compData, competition) {
           totalRoundsCompleted: scores.length,
           highestWpm,
           lowestWpm,
+          totalErrors,
+          totalBackspaces,
           roundScores: scores
         };
       })
@@ -528,7 +564,7 @@ async function showFinalResults(competitionId, compData, competition) {
       }
     );
 
-    // Update each participant's final data
+    // Update each participant's final data (persist)
     for (const ranking of finalRankings) {
       await Competition.findByIdAndUpdate(
         competitionId,
@@ -548,16 +584,18 @@ async function showFinalResults(competitionId, compData, competition) {
       );
     }
 
-    console.log(`✓ Competition completed - Winner: ${finalRankings.participantName} (${finalRankings.averageWpm} WPM)`);
+    console.log('✓ Competition completed');
 
-    // Emit final results
+    // Emit final results (include totalErrors / totalBackspaces)
     io.to(`competition_${competitionId}`).emit('finalResults', {
       rankings: finalRankings.map(r => ({
         name: r.participantName,
         avgWpm: r.averageWpm,
         avgAccuracy: r.averageAccuracy,
         rank: r.rank,
-        rounds: r.roundScores
+        rounds: r.roundScores,
+        totalErrors: r.totalErrors,
+        totalBackspaces: r.totalBackspaces
       }))
     });
 

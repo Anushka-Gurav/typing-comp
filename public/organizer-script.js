@@ -116,9 +116,9 @@ createCompBtn.addEventListener('click', async () => {
       codeValue.textContent = data.code;
 
       // Transition UI - hide form, show code
-      document.getElementById('setupForm').classList.add('hidden');  // Hide form only
-      codeDisplay.classList.remove('hidden');  // Show code display
-      codeDisplay.classList.add('show');  // Add animation class
+      document.getElementById('setupForm').classList.add('hidden');
+      codeDisplay.classList.remove('hidden');
+      codeDisplay.classList.add('show');
       
       // Show control panel elements
       roundSelector.classList.remove('hidden');
@@ -142,8 +142,6 @@ createCompBtn.addEventListener('click', async () => {
     alert('Connection error');
   }
 });
-
-
 
 // Render round buttons with status
 function renderRoundButtons() {
@@ -261,28 +259,35 @@ socket.on('participantJoined', (data) => {
 
 socket.on('leaderboardUpdate', (data) => {
   const leaderboard = data.leaderboard;
-  leaderboardContainer.innerHTML = leaderboard.map((item, index) => `
-    <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
-      <span class="leaderboard-rank">#${index + 1}</span>
-      <span class="leaderboard-name">${item.name}</span>
-      <span class="leaderboard-stats">
-        <span>${item.wpm} WPM</span>
-        <span>${item.accuracy}%</span>
-      </span>
-    </div>
-  `).join('');
+  leaderboardContainer.innerHTML = `
+    <h4>🏁 Live Round ${data.roundIndex + 1}</h4>
+    ${leaderboard.map((item, index) => `
+      <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
+        <span class="leaderboard-rank">#${index + 1}</span>
+        <span class="leaderboard-name">${item.name}</span>
+        <span class="leaderboard-stats">
+          <span>🏃 ${item.wpm} WPM</span>
+          <span>🎯 ${item.accuracy}%</span>
+          <span class="text-red">❌ ${item.errors ?? 0}</span>
+          <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
+        </span>
+      </div>
+    `).join('')}
+  `;
 });
 
 socket.on('roundEnded', (data) => {
   leaderboardContainer.innerHTML = `
-    <h4>Round ${data.roundIndex + 1} - Final Results</h4>
+    <h4>✅ Round ${data.roundIndex + 1} - Final Results</h4>
     ${data.leaderboard.map((item, index) => `
       <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
         <span class="leaderboard-rank">#${index + 1}</span>
         <span class="leaderboard-name">${item.name}</span>
         <span class="leaderboard-stats">
-          <span>${item.wpm} WPM</span>
-          <span>${item.accuracy}%</span>
+          <span>🏃 ${item.wpm} WPM</span>
+          <span>🎯 ${item.accuracy}%</span>
+          <span class="text-red">❌ ${item.errors ?? 0}</span>
+          <span class="text-yellow">⌫ ${item.backspaces ?? 0}</span>
         </span>
       </div>
     `).join('')}
@@ -302,7 +307,9 @@ socket.on('finalResults', (data) => {
           <span class="leaderboard-name">${item.name}</span>
           <span class="leaderboard-stats">
             <span>Avg: ${item.avgWpm} WPM</span>
-            <span>${item.avgAccuracy}%</span>
+            <span>🎯 ${item.avgAccuracy}%</span>
+            <span class="text-red">❌ ${item.totalErrors ?? 0}</span>
+            <span class="text-yellow">⌫ ${item.totalBackspaces ?? 0}</span>
           </span>
         </div>
       `;

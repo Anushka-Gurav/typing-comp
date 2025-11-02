@@ -8,6 +8,11 @@ let testStartTime = 0;
 let typingText = '';
 let currentRoundDuration = 0;
 
+let totalErrors = 0;
+let backspaceCount = 0;
+let typedChars = [];
+let errorIndices = new Set();
+
 // DOM Elements
 const joinScreen = document.getElementById('joinScreen');
 const lobbyScreen = document.getElementById('lobbyScreen');
@@ -66,14 +71,51 @@ joinBtn.addEventListener('click', () => {
 });
 
 // ============= TYPING INPUT HANDLER =============
-typingInput.addEventListener('input', () => {
+typingInput.addEventListener('keydown', (e) => {
   if (!isTestInProgress) return;
 
-  const inputText = typingInput.value;
+  // Backspace handling
+  if (e.key === 'Backspace') {
+    e.preventDefault();
+    if (typedChars.length > 0) {
+      const removedIndex = typedChars.length - 1;
+      if (errorIndices.has(removedIndex)) {
+        errorIndices.delete(removedIndex);
+        totalErrors = Math.max(0, totalErrors - 1);
+      }
+      backspaceCount++;
+      typedChars.pop();
+      typingInput.value = typedChars.join('');
+      updateTypingStats();
+    }
+    return;
+  }
+
+  // Printable character
+  if (e.key.length === 1) {
+    e.preventDefault();
+    const nextIndex = typedChars.length;
+    const expectedChar = typingText[nextIndex] || '';
+
+    typedChars.push(e.key);
+    typingInput.value = typedChars.join('');
+
+    if (e.key !== expectedChar) {
+      totalErrors++;
+      errorIndices.add(nextIndex);
+    }
+
+    updateTypingStats();
+  }
+});
+
+// ============= CORE UPDATE FUNCTION =============
+function updateTypingStats() {
+  const inputText = typedChars.join('');
   const correctChars = calculateCorrectChars(inputText, typingText);
   const totalChars = inputText.length;
+  const incorrectChars = totalChars - correctChars;
 
-  // Calculate WPM and Accuracy
   const elapsedSeconds = (Date.now() - testStartTime) / 1000;
   const wpm = elapsedSeconds > 0
     ? Math.round((correctChars / 5) / (elapsedSeconds / 60))
@@ -81,21 +123,21 @@ typingInput.addEventListener('input', () => {
   const accuracy = totalChars > 0
     ? Math.round((correctChars / totalChars) * 100)
     : 100;
-
-  // Update display
   wpmDisplay.textContent = wpm;
   accuracyDisplay.textContent = accuracy + '%';
   updateTextDisplay(inputText);
 
-  // Send progress to server (server validates)
+  // Emit progress (server validates)
   socket.emit('progress', {
     competitionId,
     correctChars,
-    totalChars
+    totalChars,
+    errors: totalErrors,
+    backspaces: backspaceCount,
   });
-});
+}
 
-// Calculate correct characters
+// ============= SUPPORTING FUNCTIONS =============
 function calculateCorrectChars(input, reference) {
   let correct = 0;
   for (let i = 0; i < input.length; i++) {
@@ -104,7 +146,6 @@ function calculateCorrectChars(input, reference) {
   return correct;
 }
 
-// Update text display with colors
 function updateTextDisplay(inputText) {
   let html = '';
   for (let i = 0; i < typingText.length; i++) {
@@ -120,13 +161,12 @@ function updateTextDisplay(inputText) {
     } else if (i === inputText.length) {
       span = `<span class="current">${char}</span>`;
     }
-
     html += span;
   }
   textDisplay.innerHTML = html;
 }
 
-// Start timer
+// Timer
 function startTimer(duration) {
   currentRoundDuration = duration;
   let timeLeft = duration;
@@ -144,7 +184,7 @@ function startTimer(duration) {
   }, 1000);
 }
 
-// Show error
+// Error display
 function showError(message) {
   joinError.textContent = message;
   joinError.classList.add('show');
@@ -152,7 +192,6 @@ function showError(message) {
 }
 
 // ============= SOCKET EVENTS =============
-
 socket.on('joinSuccess', (data) => {
   competitionId = data.competitionId;
   competitionNameDisplay.textContent = data.name;
@@ -160,12 +199,10 @@ socket.on('joinSuccess', (data) => {
 
   joinScreen.classList.add('hidden');
   lobbyScreen.classList.remove('hidden');
-  console.log('✓ Joined successfully');
 });
 
 socket.on('participantJoined', (data) => {
   participantCountDisplay.textContent = data.totalParticipants;
-  console.log(`✓ ${data.name} joined. Total: ${data.totalParticipants}`);
 });
 
 socket.on('roundStarted', (data) => {
@@ -173,18 +210,20 @@ socket.on('roundStarted', (data) => {
   typingText = data.text;
   const duration = data.duration;
 
-  // Show typing screen
+  typedChars = [];
+  totalErrors = 0;
+  backspaceCount = 0;
+  errorIndices.clear();
+
   lobbyScreen.classList.add('hidden');
   resultsScreen.classList.add('hidden');
   testScreen.classList.remove('hidden');
 
-  // Reset
   typingInput.value = '';
   typingInput.disabled = false;
   typingInput.focus();
   updateTextDisplay('');
 
-  // Reset stats
   wpmDisplay.textContent = '0';
   accuracyDisplay.textContent = '100%';
 
@@ -192,8 +231,6 @@ socket.on('roundStarted', (data) => {
   testStartTime = Date.now();
 
   startTimer(duration);
-
-  console.log(`✓ Round ${currentRound + 1} started`);
 });
 
 socket.on('roundEnded', (data) => {
@@ -202,28 +239,16 @@ socket.on('roundEnded', (data) => {
   testScreen.classList.add('hidden');
   resultsScreen.classList.remove('hidden');
 
-  // Find personal result
   const personalResult = data.leaderboard.find(item => item.name === participantName);
   if (personalResult) {
     document.getElementById('resultWpm').textContent = personalResult.wpm;
     document.getElementById('resultAccuracy').textContent = personalResult.accuracy + '%';
+    document.getElementById('nextRoundText').innerHTML = `
+      Errors: <b>${personalResult.errors || 0}</b> |
+      Backspaces: <b>${personalResult.backspaces || 0}</b> |
+      Fair Score: <b>${personalResult.fairScore || 0}</b>
+    `;
   }
-
-  // // Show leaderboard (only results, no live tracking)
-  // const leaderboardHtml = data.leaderboard.map((item, index) => `
-  //   <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
-  //     <span class="leaderboard-rank">#${index + 1}</span>
-  //     <span class="leaderboard-name">${item.name}</span>
-  //     <span class="leaderboard-stats">
-  //       <span>${item.wpm} WPM</span>
-  //       <span>${item.accuracy}%</span>
-  //     </span>
-  //   </div>
-  // `).join('');
-
-  // document.getElementById('roundLeaderboard').innerHTML = leaderboardHtml;
-
-  console.log('✓ Round ended');
 });
 
 socket.on('finalResults', (data) => {
@@ -241,7 +266,9 @@ socket.on('finalResults', (data) => {
           <div class="rank-name">${item.name}</div>
           <div class="rank-stats">
             <span>Avg WPM: <strong>${item.avgWpm}</strong></span>
-            <span>Avg Accuracy: <strong>${item.avgAccuracy}%</strong></span>
+            <span>Accuracy: <strong>${item.avgAccuracy}%</strong></span>
+            <span>Errors: <strong>${item.totalErrors}</strong></span>
+            <span>Backspaces: <strong>${item.totalBackspaces}</strong></span>
           </div>
         </div>
       </div>
@@ -249,8 +276,6 @@ socket.on('finalResults', (data) => {
   }).join('');
 
   document.getElementById('finalRankings').innerHTML = rankingsHtml;
-
-  console.log('✓ Competition completed');
 });
 
 socket.on('participantLeft', (data) => {
@@ -259,7 +284,6 @@ socket.on('participantLeft', (data) => {
 
 socket.on('error', (data) => {
   showError(data.message || 'An error occurred');
-  console.error('❌ Error:', data.message);
 });
 
 socket.on('disconnect', () => {
