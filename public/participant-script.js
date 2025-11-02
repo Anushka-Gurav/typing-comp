@@ -209,19 +209,19 @@ socket.on('roundEnded', (data) => {
     document.getElementById('resultAccuracy').textContent = personalResult.accuracy + '%';
   }
 
-  // Show leaderboard (only results, no live tracking)
-  const leaderboardHtml = data.leaderboard.map((item, index) => `
-    <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
-      <span class="leaderboard-rank">#${index + 1}</span>
-      <span class="leaderboard-name">${item.name}</span>
-      <span class="leaderboard-stats">
-        <span>${item.wpm} WPM</span>
-        <span>${item.accuracy}%</span>
-      </span>
-    </div>
-  `).join('');
+  // // Show leaderboard (only results, no live tracking)
+  // const leaderboardHtml = data.leaderboard.map((item, index) => `
+  //   <div class="leaderboard-item top-${index < 3 ? index + 1 : ''}">
+  //     <span class="leaderboard-rank">#${index + 1}</span>
+  //     <span class="leaderboard-name">${item.name}</span>
+  //     <span class="leaderboard-stats">
+  //       <span>${item.wpm} WPM</span>
+  //       <span>${item.accuracy}%</span>
+  //     </span>
+  //   </div>
+  // `).join('');
 
-  document.getElementById('roundLeaderboard').innerHTML = leaderboardHtml;
+  // document.getElementById('roundLeaderboard').innerHTML = leaderboardHtml;
 
   console.log('✓ Round ended');
 });

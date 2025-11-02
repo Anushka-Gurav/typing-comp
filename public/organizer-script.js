@@ -115,9 +115,12 @@ createCompBtn.addEventListener('click', async () => {
       competitionCode = data.code;
       codeValue.textContent = data.code;
 
-      // Transition UI
-      document.querySelector('.setup-section').style.display = 'none';
-      codeDisplay.classList.remove('hidden');
+      // Transition UI - hide form, show code
+      document.getElementById('setupForm').classList.add('hidden');  // Hide form only
+      codeDisplay.classList.remove('hidden');  // Show code display
+      codeDisplay.classList.add('show');  // Add animation class
+      
+      // Show control panel elements
       roundSelector.classList.remove('hidden');
       compInfo.classList.remove('hidden');
       
@@ -139,6 +142,8 @@ createCompBtn.addEventListener('click', async () => {
     alert('Connection error');
   }
 });
+
+
 
 // Render round buttons with status
 function renderRoundButtons() {
