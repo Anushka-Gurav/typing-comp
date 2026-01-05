@@ -73,12 +73,19 @@ function renderRounds() {
     `;
     roundsList.appendChild(roundDiv);
 
-    // Character counter
+    // Persist text input into state
     const textarea = document.getElementById(`text-${index}`);
-    textarea.addEventListener('input', function() {
+    textarea.addEventListener('input', function () {
+      rounds[index].text = this.value;
+      // Character counter
       document.getElementById(`count-${index}`).textContent = this.value.length;
     });
-    document.getElementById(`count-${index}`).textContent = round.text.length;
+
+    // Persist duration input into state
+    const durationInput = document.getElementById(`duration-${index}`);
+    durationInput.addEventListener('input', function () {
+      rounds[index].duration = Number(this.value);
+    });
   });
 }
 
