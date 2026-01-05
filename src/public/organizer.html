@@ -65,7 +65,7 @@
             <p>Share this code with participants:</p>
             <div class="code-box">
               <span id="codeValue" class="code-big"></span>
-              <button type="button" class="btn-copy" onclick="copyCode()">
+              <button type="button" class="btn-copy" id="copyBtn">
                 📋 Copy
               </button>
             </div>
@@ -92,6 +92,19 @@
             <div class="info-box">
               <label>Status:</label>
               <span id="statusDisplay" class="status-badge">Pending</span>
+            </div>
+          </div>
+
+          <!-- EXPORT SECTION -->
+          <div id="exportSection" class="export-section hidden">
+            <h3>📥 Export Results</h3>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <button class="btn-secondary" id="exportExcelBtn" style="flex: 1;">
+                📊 Excel
+              </button>
+              <button class="btn-secondary" id="exportPdfBtn" style="flex: 1;">
+                📄 PDF
+              </button>
             </div>
           </div>
 
@@ -143,6 +156,8 @@
     </div>
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="organizer-script.js"></script>
   </body>
 </html>
